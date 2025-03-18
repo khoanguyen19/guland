@@ -30,6 +30,18 @@ export default function AuthenticatedLayout({ header, children }) {
                                 >
                                     Dashboard
                                 </NavLink>
+                                <NavLink
+                                    href={route('map')}
+                                    active={route().current('map')}
+                                >
+                                    Bản đồ
+                                </NavLink>
+                                <NavLink
+                                    href={route('report')}
+                                    active={route().current('report')}
+                                >
+                                    Báo cáo
+                                </NavLink>
                             </div>
                         </div>
 
@@ -134,6 +146,18 @@ export default function AuthenticatedLayout({ header, children }) {
                         >
                             Dashboard
                         </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            href={route('map')}
+                            active={route().current('map')}
+                        >
+                            Bản đồ
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            href={route('report')}
+                            active={route().current('report')}
+                        >
+                            Báo cáo
+                        </ResponsiveNavLink>
                     </div>
 
                     <div className="border-t border-gray-200 pb-1 pt-4">
@@ -161,15 +185,6 @@ export default function AuthenticatedLayout({ header, children }) {
                     </div>
                 </div>
             </nav>
-
-            {header && (
-                <header className="bg-white shadow">
-                    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-                        {header}
-                    </div>
-                </header>
-            )}
-
             <main>{children}</main>
         </div>
     );
