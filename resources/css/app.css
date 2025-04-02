@@ -5,3 +5,7 @@
 .tooltip-clickable-area {
     cursor: pointer;
   }
+
+.project-detail-tooltip-active {
+  z-index: 2000 !important;
+}

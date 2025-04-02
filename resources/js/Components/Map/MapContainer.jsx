@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { MapContainer as LeafletMapContainer, TileLayer, useMap, Marker, Popup, Rectangle } from 'react-leaflet';
+import { MapContainer as LeafletMapContainer, TileLayer, useMap, Marker, Popup, Rectangle, Tooltip } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import LayerControl from './LayerControl';
@@ -21,18 +21,17 @@ const MapComponent = ({ customLayers = [] }) => {
     const [showCommentForm, setShowCommentForm] = useState(false);
     const [contextMenuPosition, setContextMenuPosition] = useState(null);
     const [currentZoom, setCurrentZoom] = useState(13);
+    const [hoveredRectangle, setHoveredRectangle] = useState(null);
+    const [activeRectangle, setActiveRectangle] = useState(null);
 
-    // Sửa vấn đề icon của Leaflet trong React
     useEffect(() => {
         loadMarkers();
     }, [customLayers]);
 
-    // Tải danh sách markers từ API
     const loadMarkers = async () => {
         try {
             setIsLoading(true);
             const response = await axios.get(route('markers.index'));
-            console.log("loadMarkers > response:", response)
 
             // Chuyển đổi dữ liệu từ API để phù hợp với cấu trúc dữ liệu của component
             const formattedMarkers = response.data.map(marker => ({
@@ -53,15 +52,16 @@ const MapComponent = ({ customLayers = [] }) => {
         }
     };
 
-    // Xử lý click trên bản đồ để thêm marker
-    const handleMapClick = (e) => {
-        setSelectedPosition({
-            lat: e.latlng.lat,
-            lng: e.latlng.lng,
-            x: e.originalEvent.clientX,
-            y: e.originalEvent.clientY
-        });
-        setShowMarkerForm(true);
+    // Xử lý click trên Rectangle để hiển thị thông tin chi tiết
+    const handleRectangleClick = (markerId) => {
+        if (activeRectangle === markerId) {
+            // Nếu đã kích hoạt, bỏ kích hoạt
+            setActiveRectangle(null);
+        } else {
+            // Nếu chưa kích hoạt, kích hoạt
+            setActiveRectangle(markerId);
+            handleMarkerClick(markerId);
+        }
     };
 
     // Xử lý hiển thị menu context khi click chuột phải
@@ -195,27 +195,19 @@ const MapComponent = ({ customLayers = [] }) => {
     // Component MapEvents để xử lý sự kiện của bản đồ
     const MapEvents = () => {
         const map = useMap();
-
         useEffect(() => {
-            map.on('click', handleMapClick);
-            // Thay đổi xử lý sự kiện contextmenu để hiển thị menu
-            map.on('contextmenu', handleContextMenu);
-
-            // Thêm sự kiện zoom để cập nhật mức độ zoom hiện tại
+            // Chỉ giữ lại sự kiện zoom, bỏ sự kiện contextmenu
             map.on('zoomend', () => {
                 const newZoom = map.getZoom();
-                console.log("Zoom level changed to:", newZoom);
                 setCurrentZoom(newZoom);
             });
 
+
             // Thiết lập zoom ban đầu
             setCurrentZoom(map.getZoom());
-            console.log("Initial zoom level:", map.getZoom());
 
             return () => {
-                map.off('click', handleMapClick);
                 // Hủy đăng ký sự kiện khi component unmount
-                map.off('contextmenu', handleContextMenu);
                 map.off('zoomend');
             };
         }, [map]);
@@ -223,16 +215,25 @@ const MapComponent = ({ customLayers = [] }) => {
         return null;
     };
 
+
     // Tạo marker hoặc project detail dựa vào mức độ zoom
     const renderMarkers = () => {
-        console.log("renderMarkers - currentZoom:", currentZoom);
-        
+
         return markers.map(marker => {
-            console.log("Rendering marker:", marker.id, "at zoom level:", currentZoom);
-            
+            const projectData = {
+                id: marker.id,
+                name: marker.title,
+                project_type: marker.project_type || 'Dự án bất động sản',
+                product_type: marker.product_type || 'Đất nền',
+                price: marker.price || 0,
+                start_date: marker.start_date,
+                end_date: marker.end_date,
+                note: marker.description,
+                legalDocuments: marker.legalDocuments || []
+            };
+
             // Nếu zoom < 14, hiển thị marker đơn giản
             if (currentZoom < 14) {
-                console.log("Showing simple marker for:", marker.id);
                 return (
                     <Marker
                         key={marker.id}
@@ -242,38 +243,11 @@ const MapComponent = ({ customLayers = [] }) => {
                         }}
                     >
                         <Popup>
-                            <div className="max-w-xs">
-                                <h3 className="font-bold">{marker.title}</h3>
-                                <p>{marker.description}</p>
-
-                                {/* Phần bình luận */}
-                                <div className="mt-3 border-t pt-2">
-                                    <div className="flex items-center justify-between">
-                                        <h4 className="font-semibold">Bình luận ({marker.comments.length})</h4>
-                                        {!showCommentForm && (
-                                            <button
-                                                onClick={() => setShowCommentForm(true)}
-                                                className="text-xs text-blue-500 hover:underline"
-                                            >
-                                                Thêm bình luận
-                                            </button>
-                                        )}
-                                    </div>
-
-                                    {showCommentForm && activeMarkerId === marker.id ? (
-                                        <CommentForm
-                                            markerId={marker.id}
-                                            onCommentAdded={(comment) => handleAddComment(marker.id, comment)}
-                                            onCancel={() => setShowCommentForm(false)}
-                                        />
-                                    ) : (
-                                        <div className="mt-2">
-                                            <CommentList comments={marker.comments} />
-                                        </div>
-                                    )}
+                            <ProjectDetail project={projectData} />
+                            <div className="mt-3 pt-2 border-t">
+                                <div className="max-h-[40vh] overflow-y-auto">
+                                    <p className="whitespace-pre-line">{marker.description}</p>
                                 </div>
-
-                                {/* Nút xóa marker */}
                                 <div className="mt-3 pt-2 border-t flex justify-end">
                                     <button
                                         onClick={(e) => {
@@ -292,7 +266,6 @@ const MapComponent = ({ customLayers = [] }) => {
             }
             // Nếu zoom >= 14, hiển thị thông tin chi tiết dự án
             else {
-                console.log("Showing detailed info for:", marker.id);
                 // Tạo một hình chữ nhật xung quanh vị trí marker để hiển thị thông tin chi tiết
                 // Kích thước hình chữ nhật phụ thuộc vào mức độ zoom
                 const offset = 0.002 / (currentZoom - 13); // Điều chỉnh kích thước theo mức độ zoom
@@ -302,93 +275,59 @@ const MapComponent = ({ customLayers = [] }) => {
                 ];
 
                 // Chuyển đổi dữ liệu marker để phù hợp với ProjectDetail
-                const projectData = {
-                    id: marker.id,
-                    name: marker.title,
-                    project_type: marker.project_type,
-                    product_type: marker.product_type,
-                    price: marker.price,
-                    start_date: marker.start_date,
-                    end_date: marker.end_date,
-                    note: marker.description,
-                    legalDocuments: marker.legalDocuments || []
-                };
+
+
+                const isActive = activeRectangle === marker.id;
 
                 return (
-                    <React.Fragment key={marker.id}>
-                        <Marker
-                            position={marker.position}
-                            eventHandlers={{
-                                click: () => handleMarkerClick(marker.id)
-                            }}
-                        />
+                    <div key={marker.id}>
+                        {/* Rectangle để đánh dấu khu vực dự án */}
                         <Rectangle
                             bounds={bounds}
-                            pathOptions={{ color: 'transparent', fillOpacity: 0 }}
-                            eventHandlers={{
-                                click: () => handleMarkerClick(marker.id)
-                            }}
                         >
-                            <Popup>
+                            <Tooltip
+                                key={`tooltip-${marker.id}-${isActive}`}
+                                direction="center"
+                                permanent={true}
+                                opacity={1}
+                                interactive={true}
+                                eventHandlers={{
+                                    click: (e) => {
+                                        e.originalEvent.stopPropagation();
+                                        handleRectangleClick(marker.id);
+                                    },
+                                }}
+                            >
                                 <ProjectDetail project={projectData} />
-
-                                {/* Phần bình luận */}
-                                <div className="mt-3 border-t pt-2">
-                                    <div className="flex items-center justify-between">
-                                        <h4 className="font-semibold">Bình luận ({marker.comments.length})</h4>
-                                        {!showCommentForm && (
-                                            <button
-                                                onClick={() => setShowCommentForm(true)}
-                                                className="text-xs text-blue-500 hover:underline"
-                                            >
-                                                Thêm bình luận
-                                            </button>
-                                        )}
-                                    </div>
-
-                                    {showCommentForm && activeMarkerId === marker.id ? (
-                                        <CommentForm
-                                            markerId={marker.id}
-                                            onCommentAdded={(comment) => handleAddComment(marker.id, comment)}
-                                            onCancel={() => setShowCommentForm(false)}
-                                        />
-                                    ) : (
-                                        <div className="mt-2">
-                                            <CommentList comments={marker.comments} />
+                                {isActive && (
+                                    <div className="mt-3 pt-2 border-t">
+                                        <div className="max-h-[40vh] overflow-y-auto">
+                                            <p className="whitespace-pre-line">{marker.description}</p>
                                         </div>
-                                    )}
-                                </div>
-
-                                {/* Nút xóa marker */}
-                                <div className="mt-3 pt-2 border-t flex justify-end">
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleDeleteMarker(marker.id);
-                                        }}
-                                        className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm"
-                                    >
-                                        Xóa điểm đánh dấu
-                                    </button>
-                                </div>
-                            </Popup>
+                                        <div className="mt-3 pt-2 border-t flex justify-end">
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleDeleteMarker(marker.id);
+                                                }}
+                                                className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm"
+                                            >
+                                                Xóa điểm đánh dấu
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </Tooltip>
                         </Rectangle>
-                    </React.Fragment>
+                    </div>
                 );
             }
         });
+
     };
 
     return (
         <div className="relative h-[600px] w-full">
-            {isLoading && (
-                <div className="absolute top-0 left-0 z-[2000] flex h-full w-full items-center justify-center bg-white bg-opacity-70">
-                    <div className="flex flex-col items-center">
-                        <div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
-                        <p className="mt-2 text-gray-700">Đang xử lý...</p>
-                    </div>
-                </div>
-            )}
 
             <LeafletMapContainer
                 center={[16.047079, 108.206230]} // Tọa độ Đà Nẵng
@@ -399,12 +338,11 @@ const MapComponent = ({ customLayers = [] }) => {
                     mapRef.current = mapInstance;
                     // Thiết lập zoom ban đầu
                     setCurrentZoom(mapInstance.getZoom());
-                    console.log("Map created with zoom:", mapInstance.getZoom());
                 }}
             >
                 <TileLayer
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    url="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}"
+                    attribution='Gempire'
                 />
 
                 {/* Custom Layers */}
