@@ -1,13 +1,11 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { MapContainer as LeafletMapContainer, TileLayer, useMap, Marker, Popup, Rectangle, Tooltip } from 'react-leaflet';
-import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import LayerControl from './LayerControl';
 import MarkerForm from './MarkerForm';
-import CommentForm from './CommentForm';
-import CommentList from './CommentList';
 import MapMenu from './MapMenu';
 import ProjectDetail from './ProjectDetail';
+import MarkerControl from './MarkerControl';
 import axios from 'axios';
 
 const MapComponent = ({ customLayers = [] }) => {
@@ -23,6 +21,7 @@ const MapComponent = ({ customLayers = [] }) => {
     const [currentZoom, setCurrentZoom] = useState(13);
     const [hoveredRectangle, setHoveredRectangle] = useState(null);
     const [activeRectangle, setActiveRectangle] = useState(null);
+    const [markerDisplayMode, setMarkerDisplayMode] = useState('auto'); // 'off', 'auto', 'always'
 
     useEffect(() => {
         loadMarkers();
@@ -218,6 +217,10 @@ const MapComponent = ({ customLayers = [] }) => {
 
     // Tạo marker hoặc project detail dựa vào mức độ zoom
     const renderMarkers = () => {
+        // Nếu chế độ hiển thị là 'off', không hiển thị marker nào
+        if (markerDisplayMode === 'off') {
+            return null;
+        }
 
         return markers.map(marker => {
             const projectData = {
@@ -232,8 +235,9 @@ const MapComponent = ({ customLayers = [] }) => {
                 legalDocuments: marker.legalDocuments || []
             };
 
-            // Nếu zoom < 14, hiển thị marker đơn giản
-            if (currentZoom < 14) {
+            // Nếu chế độ hiển thị là 'auto', hiển thị dựa vào zoom level
+            // Nếu chế độ hiển thị là 'always', luôn hiển thị marker đơn giản
+            if (markerDisplayMode === 'always' || (markerDisplayMode === 'auto' && currentZoom < 14)) {
                 return (
                     <Marker
                         key={marker.id}
@@ -263,19 +267,13 @@ const MapComponent = ({ customLayers = [] }) => {
                         </Popup>
                     </Marker>
                 );
-            }
-            // Nếu zoom >= 14, hiển thị thông tin chi tiết dự án
-            else {
-                // Tạo một hình chữ nhật xung quanh vị trí marker để hiển thị thông tin chi tiết
-                // Kích thước hình chữ nhật phụ thuộc vào mức độ zoom
-                const offset = 0.002 / (currentZoom - 13); // Điều chỉnh kích thước theo mức độ zoom
+            } else if (markerDisplayMode === 'auto' && currentZoom >= 14) {
+                // Tính toán bounds cho Rectangle
+                const offset = 0.001; // Khoảng cách offset
                 const bounds = [
                     [marker.position[0] - offset, marker.position[1] - offset * 1.5],
                     [marker.position[0] + offset, marker.position[1] + offset * 1.5]
                 ];
-
-                // Chuyển đổi dữ liệu marker để phù hợp với ProjectDetail
-
 
                 const isActive = activeRectangle === marker.id;
 
@@ -322,8 +320,9 @@ const MapComponent = ({ customLayers = [] }) => {
                     </div>
                 );
             }
-        });
 
+            return null;
+        });
     };
 
     return (
@@ -373,6 +372,12 @@ const MapComponent = ({ customLayers = [] }) => {
                         [layerId]: isActive
                     }));
                 }}
+            />
+
+            {/* Marker Display Control */}
+            <MarkerControl
+                displayMode={markerDisplayMode}
+                onModeChange={(mode) => setMarkerDisplayMode(mode)}
             />
 
             {/* Context Menu */}
