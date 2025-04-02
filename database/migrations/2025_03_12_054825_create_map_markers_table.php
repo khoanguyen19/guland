@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('map_markers', function (Blueprint $table) {
             $table->id();
-            $table->string('name'); // Tên marker
+            $table->string('name'); // Tên dự án
             $table->double('latitude', 10, 7); // Tọa độ vĩ độ
             $table->double('longitude', 10, 7); // Tọa độ kinh độ
             $table->text('note')->nullable(); // Ghi chú cho marker, có thể null

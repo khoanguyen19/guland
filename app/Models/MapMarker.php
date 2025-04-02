@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use App\Models\User;
 use App\Models\MarkerDocument;
 use App\Models\MarkerComment;
+use App\Models\LegalDocument;
 
 class MapMarker extends Model
 {
@@ -17,10 +18,16 @@ class MapMarker extends Model
      */
     protected $fillable = [
         'name',
-        'latitude', 
+        'latitude',
         'longitude',
         'note',
         'user_id',
+        'project_type',
+        'product_type',
+        'city',
+        'price',
+        'start_date',
+        'end_date',
     ];
 
     /**
@@ -29,6 +36,9 @@ class MapMarker extends Model
     protected $casts = [
         'latitude' => 'float',
         'longitude' => 'float',
+        'price' => 'decimal:2',
+        'start_date' => 'date',
+        'end_date' => 'date',
     ];
 
     /**
@@ -53,5 +63,13 @@ class MapMarker extends Model
     public function comments()
     {
         return $this->hasMany(MarkerComment::class);
+    }
+
+    /**
+     * Lấy danh sách tài liệu pháp lý của marker
+     */
+    public function legalDocuments()
+    {
+        return $this->hasMany(LegalDocument::class);
     }
 }
