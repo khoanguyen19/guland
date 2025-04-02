@@ -1,3 +1,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.tooltip-clickable-area {
+    cursor: pointer;
+  }
