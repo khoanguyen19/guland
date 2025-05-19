@@ -25,7 +25,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-    
+
     // Trang báo cáo
     Route::get('/report', [ReportController::class, 'index'])->name('report');
 });
@@ -34,7 +34,11 @@ Route::get('/map', function () {
     return Inertia::render('Map/Index');
 })->name('map');
 
-Route::get('/map/layers', [MapController::class, 'getLayers'])->name('map.layers');
+Route::get('/assistant', function () {
+    return Inertia::render('Assistant/Index');
+})->name('assistant');
+
+// Route::get('/map/layers', [MapController::class, 'getLayers'])->name('map.layers');
 
 // API cho MapMarker
 Route::middleware('auth')->group(function () {
@@ -43,7 +47,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/markers/{mapMarker}', [MapMarkerController::class, 'show'])->name('markers.show');
     Route::put('/api/markers/{mapMarker}', [MapMarkerController::class, 'update'])->name('markers.update');
     Route::delete('/api/markers/{mapMarker}', [MapMarkerController::class, 'destroy'])->name('markers.destroy');
-    
+
     // API cho MarkerComment
     Route::get('/api/markers/{mapMarker}/comments', [MarkerCommentController::class, 'index'])->name('marker.comments.index');
     Route::post('/api/markers/{mapMarker}/comments', [MarkerCommentController::class, 'store'])->name('marker.comments.store');

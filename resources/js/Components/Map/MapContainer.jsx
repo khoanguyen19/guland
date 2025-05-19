@@ -19,9 +19,9 @@ const MapComponent = ({ customLayers = [] }) => {
     const [showCommentForm, setShowCommentForm] = useState(false);
     const [contextMenuPosition, setContextMenuPosition] = useState(null);
     const [currentZoom, setCurrentZoom] = useState(13);
-    const [hoveredRectangle, setHoveredRectangle] = useState(null);
     const [activeRectangle, setActiveRectangle] = useState(null);
     const [markerDisplayMode, setMarkerDisplayMode] = useState('auto'); // 'off', 'auto', 'always'
+    const [editingMarker, setEditingMarker] = useState(null); // State mới để lưu marker đang chỉnh sửa
 
     useEffect(() => {
         loadMarkers();
@@ -40,7 +40,13 @@ const MapComponent = ({ customLayers = [] }) => {
                 description: marker.note || '',
                 user: marker.user,
                 documents: marker.documents || [],
-                comments: marker.comments || []
+                comments: marker.comments || [],
+                project_type: marker.project_type,
+                product_type: marker.product_type,
+                price: marker.price,
+                start_date: marker.start_date,
+                end_date: marker.end_date,
+                fileStorageId: marker.fileStorageId || null
             }));
 
             setMarkers(formattedMarkers);
@@ -100,12 +106,20 @@ const MapComponent = ({ customLayers = [] }) => {
         try {
             setIsLoading(true);
 
+            // Tách fileStorageId ra khỏi dữ liệu gửi đến API
+            const { fileStorageId, files, ...markerData } = data;
+
             // Gửi dữ liệu đến API để lưu marker
             const response = await axios.post(route('markers.store'), {
-                name: data.title,
+                name: markerData.title,
                 latitude: selectedPosition.lat,
                 longitude: selectedPosition.lng,
-                note: data.description
+                note: markerData.description,
+                project_type: markerData.project_type,
+                product_type: markerData.product_type,
+                price: markerData.price,
+                start_date: markerData.start_date,
+                end_date: markerData.end_date
             });
 
             // Thêm marker mới vào state
@@ -115,6 +129,12 @@ const MapComponent = ({ customLayers = [] }) => {
                 title: response.data.name,
                 description: response.data.note || '',
                 user: response.data.user,
+                project_type: response.data.project_type,
+                product_type: response.data.product_type,
+                price: response.data.price,
+                start_date: response.data.start_date,
+                end_date: response.data.end_date,
+                fileStorageId: fileStorageId, // Lưu ID để truy xuất file từ localStorage
                 documents: [],
                 comments: []
             };
@@ -177,6 +197,97 @@ const MapComponent = ({ customLayers = [] }) => {
         loadComments(markerId);
     };
 
+    // Xử lý khi bắt đầu chỉnh sửa marker
+    const handleEditMarker = (marker) => {
+        // Lấy files từ localStorage nếu có
+        let markerFiles = [];
+        if (marker.fileStorageId) {
+            const storedFiles = localStorage.getItem(marker.fileStorageId);
+            if (storedFiles) {
+                try {
+                    markerFiles = JSON.parse(storedFiles);
+                } catch (error) {
+                    console.error('Lỗi khi đọc files từ localStorage:', error);
+                }
+            }
+        }
+
+        // Chuẩn bị dữ liệu cho form chỉnh sửa
+        const formData = {
+            id: marker.id,
+            title: marker.title,
+            description: marker.description,
+            project_type: marker.project_type || '',
+            product_type: marker.product_type || '',
+            price: marker.price || '',
+            start_date: marker.start_date || '',
+            end_date: marker.end_date || '',
+            files: markerFiles,
+            fileStorageId: marker.fileStorageId
+        };
+
+        setEditingMarker(formData);
+        setShowMarkerForm(true);
+    };
+
+    // Lưu marker đã chỉnh sửa
+    const handleUpdateMarker = async (data) => {
+        try {
+            setIsLoading(true);
+
+            // Tách fileStorageId và files ra khỏi dữ liệu gửi đến API
+            const { id, fileStorageId, files, ...markerData } = data;
+
+            // Lưu files vào localStorage nếu có
+            let updatedFileStorageId = fileStorageId;
+            if (files && files.length > 0) {
+                if (!fileStorageId) {
+                    // Tạo ID mới nếu chưa có
+                    updatedFileStorageId = 'marker_' + Date.now();
+                }
+                localStorage.setItem(updatedFileStorageId, JSON.stringify(files));
+            }
+
+            // Gửi dữ liệu đến API để cập nhật marker
+            const response = await axios.put(route('markers.update', { mapMarker: id }), {
+                name: markerData.title,
+                note: markerData.description,
+                project_type: markerData.project_type,
+                product_type: markerData.product_type,
+                price: markerData.price,
+                start_date: markerData.start_date,
+                end_date: markerData.end_date
+            });
+
+            // Cập nhật marker trong state
+            setMarkers(prev => prev.map(marker => {
+                if (marker.id === id) {
+                    return {
+                        ...marker,
+                        title: response.data.name,
+                        description: response.data.note || '',
+                        project_type: response.data.project_type,
+                        product_type: response.data.product_type,
+                        price: response.data.price,
+                        start_date: response.data.start_date,
+                        end_date: response.data.end_date,
+                        fileStorageId: updatedFileStorageId
+                    };
+                }
+                return marker;
+            }));
+
+            alert('Marker đã được cập nhật thành công!');
+        } catch (error) {
+            console.error('Lỗi khi cập nhật marker:', error);
+            alert('Có lỗi xảy ra khi cập nhật marker. Vui lòng thử lại.');
+        } finally {
+            setIsLoading(false);
+            setShowMarkerForm(false);
+            setEditingMarker(null);
+        }
+    };
+
     // Thêm comment mới
     const handleAddComment = (markerId, comment) => {
         setMarkers(prev => prev.map(marker => {
@@ -200,6 +311,8 @@ const MapComponent = ({ customLayers = [] }) => {
                 const newZoom = map.getZoom();
                 setCurrentZoom(newZoom);
             });
+
+            map.on('contextmenu', handleContextMenu);
 
 
             // Thiết lập zoom ban đầu
@@ -232,6 +345,7 @@ const MapComponent = ({ customLayers = [] }) => {
                 start_date: marker.start_date,
                 end_date: marker.end_date,
                 note: marker.description,
+                fileStorageId: marker.fileStorageId, // Truyền ID để lấy file từ localStorage
                 legalDocuments: marker.legalDocuments || []
             };
 
@@ -261,6 +375,15 @@ const MapComponent = ({ customLayers = [] }) => {
                                         className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm"
                                     >
                                         Xóa điểm đánh dấu
+                                    </button>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleEditMarker(marker);
+                                        }}
+                                        className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm"
+                                    >
+                                        Chỉnh sửa điểm đánh dấu
                                     </button>
                                 </div>
                             </div>
@@ -312,6 +435,15 @@ const MapComponent = ({ customLayers = [] }) => {
                                             >
                                                 Xóa điểm đánh dấu
                                             </button>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleEditMarker(marker);
+                                                }}
+                                                className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm"
+                                            >
+                                                Chỉnh sửa điểm đánh dấu
+                                            </button>
                                         </div>
                                     </div>
                                 )}
@@ -323,10 +455,11 @@ const MapComponent = ({ customLayers = [] }) => {
 
             return null;
         });
+
     };
 
     return (
-        <div className="relative h-[600px] w-full">
+        <div className="relative h-[80vh] w-full">
 
             <LeafletMapContainer
                 center={[16.047079, 108.206230]} // Tọa độ Đà Nẵng
@@ -389,22 +522,37 @@ const MapComponent = ({ customLayers = [] }) => {
                 />
             )}
 
-            {/* Marker Form */}
-            {showMarkerForm && selectedPosition && (
-                <div className="absolute bg-white p-4 shadow-md z-[1000] w-80 rounded-md"
-                    style={{
-                        top: `${selectedPosition.y - 290}px`,
-                        left: `${selectedPosition.x - 290}px`,
-                        transform: 'translate(0, 0)'
-                    }}
-                >
-                    <MarkerForm
-                        onSave={handleSaveMarker}
-                        onCancel={() => {
-                            setShowMarkerForm(false);
-                            setSelectedPosition(null);
-                        }}
-                    />
+            {/* Marker Form Modal */}
+            {showMarkerForm && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[1000]">
+                    <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md mx-4">
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-xl font-bold">
+                                {editingMarker ? 'Chỉnh sửa điểm đánh dấu' : 'Thêm điểm đánh dấu'}
+                            </h2>
+                            <button
+                                onClick={() => {
+                                    setShowMarkerForm(false);
+                                    setSelectedPosition(null);
+                                    setEditingMarker(null);
+                                }}
+                                className="text-gray-500 hover:text-gray-700"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        <MarkerForm
+                            initialData={editingMarker}
+                            onSave={editingMarker ? handleUpdateMarker : handleSaveMarker}
+                            onCancel={() => {
+                                setShowMarkerForm(false);
+                                setSelectedPosition(null);
+                                setEditingMarker(null);
+                            }}
+                        />
+                    </div>
                 </div>
             )}
         </div>

@@ -36,6 +36,11 @@ class MapMarkerController extends Controller
             'latitude' => 'required|numeric',
             'longitude' => 'required|numeric',
             'note' => 'nullable|string',
+            'project_type' => 'nullable|string|max:255',
+            'product_type' => 'nullable|string|max:255',
+            'price' => 'nullable|numeric',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date',
         ]);
 
         // Thêm user_id vào dữ liệu đã xác thực
@@ -58,8 +63,7 @@ class MapMarkerController extends Controller
      */
     public function show(MapMarker $mapMarker)
     {
-        $mapMarker->load(['user:id,name', 'documents', 'comments']);
-        
+        $mapMarker->load(['user:id,name', 'documents', 'comments', 'legalDocuments']);
         return response()->json($mapMarker);
     }
 
@@ -80,10 +84,15 @@ class MapMarkerController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'note' => 'nullable|string',
+            'project_type' => 'nullable|string|max:255',
+            'product_type' => 'nullable|string|max:255',
+            'price' => 'nullable|numeric',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date',
         ]);
 
         $mapMarker->update($validated);
-        
+
         return response()->json($mapMarker);
     }
 
@@ -101,7 +110,7 @@ class MapMarkerController extends Controller
         }
 
         $mapMarker->delete();
-        
+
         return response()->json(['message' => 'Marker đã được xóa thành công']);
     }
 }

@@ -12,7 +12,7 @@ export default function AuthenticatedLayout({ header, children }) {
         useState(false);
 
     return (
-        <div className="min-h-screen bg-gray-100">
+        <div className="h-full bg-gray-100">
             <nav className="border-b border-gray-100 bg-white">
                 <div className="mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex h-16 justify-between">
@@ -41,6 +41,12 @@ export default function AuthenticatedLayout({ header, children }) {
                                     active={route().current('report')}
                                 >
                                     Báo cáo
+                                </NavLink>
+                                <NavLink
+                                    href={route('assistant')}
+                                    active={route().current('assistant')}
+                                >
+                                    Trợ lý AI
                                 </NavLink>
                             </div>
                         </div>
@@ -158,6 +164,12 @@ export default function AuthenticatedLayout({ header, children }) {
                         >
                             Báo cáo
                         </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            href={route('assistant')}
+                            active={route().current('assistant')}
+                        >
+                            Trợ lý AI
+                        </ResponsiveNavLink>
                     </div>
 
                     <div className="border-t border-gray-200 pb-1 pt-4">
@@ -185,7 +197,7 @@ export default function AuthenticatedLayout({ header, children }) {
                     </div>
                 </div>
             </nav>
-            <main>{children}</main>
+            <main className="h-full">{children}</main>
         </div>
     );
 }

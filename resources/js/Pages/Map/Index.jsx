@@ -8,23 +8,28 @@ const MapIndex = ({ auth }) => {
     const [layers, setLayers] = useState([]);
 
 
-    // Dữ liệu mẫu cho các layer bản đồ
     useEffect(() => {
-        // Giả lập dữ liệu layer để demo
         const demoLayers = [
             {
                 id: 'qh-2030',
                 name: 'Quy hoạch 2030',
                 path: 'da-nang-2030',
                 attribution: 'Quy hoạch TP.HCM 2030',
-                opacity: 0.7
+                opacity: 1
             },
             {
                 id: 'qh-xd',
                 name: 'Quy hoạch Xây dựng',
                 path: 'danang-qhc',
                 attribution: 'Quy hoạch TP.HCM 2030',
-                opacity: 0.7
+                opacity: 1
+            },
+            {
+                id: 'qh-hn-2',
+                name: 'Quy hoạch Hanoi 20230',
+                path: 'ha-noi-2030-2',
+                attribution: 'Quy hoạch Hanoi 20230',
+                opacity: 1
             }
         ];
 
