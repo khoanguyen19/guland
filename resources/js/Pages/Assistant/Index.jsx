@@ -72,7 +72,7 @@ const AssistantPage = ({ auth }) => {
 
                 headers = {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer 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`
+                    // 'Authorization': `Bearer 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`
                 };
             }
 
