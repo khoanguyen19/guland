@@ -1,0 +1,60 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: guland_app
+    restart: unless-stopped
+    volumes:
+    - app-storage:/var/www/html/storage
+    - app-bootstrap:/var/www/html/bootstrap/cache
+    - .:/var/www/html
+    networks:
+    - guland_network
+
+  nginx:
+    image: nginx:alpine
+    container_name: guland_nginx
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+    volumes:
+      - .:/var/www/html
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - guland_network
+
+  db:
+    image: mysql:8.0
+    container_name: guland_db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: guland
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_PASSWORD: password
+      MYSQL_USER: guland
+    volumes:
+      - dbdata:/var/lib/mysql
+    networks:
+      - guland_network
+
+  node:
+    image: node:18
+    container_name: guland_node
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/var/www/html
+    working_dir: /var/www/html
+    command: bash -c "npm install && npm run dev -- --host"
+    networks:
+      - guland_network
+
+networks:
+  guland_network:
+    driver: bridge
+
+volumes:
+  app-storage:
+  app-bootstrap:
+  dbdata:
