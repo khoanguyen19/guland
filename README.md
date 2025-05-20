@@ -191,17 +191,6 @@ export default defineConfig({
 cp .env.example .env
 ```
 
-Cấu hình kết nối cơ sở dữ liệu trong tệp `.env`:
-
-```
-DB_CONNECTION=pgsql
-DB_HOST=ep-morning-base-a15xz8tn.ap-southeast-1.aws.neon.tech
-DB_PORT=5432
-DB_DATABASE=guland
-DB_USERNAME=guland_owner
-DB_PASSWORD=npg_MABxCujO9h1d
-```
-
 5. **Khởi chạy các container Docker**
 
 ```bash
